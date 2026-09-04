@@ -6,6 +6,7 @@ import {
 	type FeedSource,
 } from '../config/feeds';
 import { parseFeed, type Article } from './parse';
+import { categorySlug, DEFAULT_CATEGORY } from './category';
 
 export type { Article };
 
@@ -118,15 +119,24 @@ export function getFeedBundle(force = false): Promise<FeedBundle> {
 	return inFlight;
 }
 
-/** Every distinct feed-level tag, with how many feeds carry it. */
-export function tagIndex(): { tag: string; count: number }[] {
+/**
+ * Every distinct feed-level tag, with how many feeds carry it and which
+ * categories it appears under — the top tabs hide chips that can't match.
+ */
+export function tagIndex(): { tag: string; count: number; categories: string[] }[] {
 	const counts = new Map<string, number>();
+	const categories = new Map<string, Set<string>>();
+
 	for (const feed of FEEDS) {
+		const slug = categorySlug(feed.category || DEFAULT_CATEGORY);
 		for (const tag of feed.tags) {
 			counts.set(tag, (counts.get(tag) ?? 0) + 1);
+			if (!categories.has(tag)) categories.set(tag, new Set());
+			categories.get(tag)!.add(slug);
 		}
 	}
+
 	return [...counts.entries()]
-		.map(([tag, count]) => ({ tag, count }))
+		.map(([tag, count]) => ({ tag, count, categories: [...categories.get(tag)!] }))
 		.sort((a, b) => a.tag.localeCompare(b.tag));
 }

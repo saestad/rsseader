@@ -1,6 +1,7 @@
 ---
 import type { Article } from '../lib/feeds';
 import { feedColor } from '../lib/color';
+import { categorySlug } from '../lib/category';
 
 interface Props {
 	article: Article;
@@ -26,6 +27,7 @@ const fallbackDate = article.publishedAt
 <li
 	class="card"
 	data-source={article.sourceId}
+	data-category={categorySlug(article.sourceCategory)}
 	data-tags={article.tags.join('|')}
 	data-ts={article.publishedAt ?? 0}
 	data-search={haystack}

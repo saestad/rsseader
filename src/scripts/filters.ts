@@ -7,6 +7,7 @@ interface Row {
 	el: HTMLElement;
 	ts: number;
 	source: string;
+	category: string;
 	tags: Set<string>;
 	search: string;
 }
@@ -19,12 +20,14 @@ const searchInput = document.getElementById('q') as HTMLInputElement | null;
 const list = document.getElementById('feed');
 const empty = document.getElementById('empty');
 const shown = document.getElementById('shown-count');
+const total = document.getElementById('total-count');
 
 if (sidebar && searchInput && list) {
 	const rows: Row[] = [...list.querySelectorAll<HTMLElement>('.card')].map((el) => ({
 		el,
 		ts: Number(el.dataset.ts ?? 0),
 		source: el.dataset.source ?? '',
+		category: el.dataset.category ?? '',
 		tags: new Set((el.dataset.tags ?? '').split('|').filter(Boolean)),
 		search: el.dataset.search ?? '',
 	}));
@@ -32,15 +35,23 @@ if (sidebar && searchInput && list) {
 	const rangeChips = [...sidebar.querySelectorAll<HTMLElement>('[data-range]')];
 	const tagChips = [...sidebar.querySelectorAll<HTMLElement>('[data-tag]')];
 	const sourceButtons = [...sidebar.querySelectorAll<HTMLElement>('[data-source-id]')];
+	// The tabs live up in the header, not in the sidebar.
+	const catTabs = [...document.querySelectorAll<HTMLElement>('.categories [data-category]')];
 
 	const state = {
 		q: '',
 		range: 'all',
+		category: 'all',
 		tags: new Set<string>(),
 		sources: new Set<string>(),
 	};
 
-	/** Each dimension is independent; a card must clear all of them to show. */
+	/**
+	 * Each dimension is independent; a card must clear all of them to show.
+	 * Category is the outermost of them: it scopes the sidebar too, so the other
+	 * filters only ever offer choices that exist inside the current tab.
+	 */
+	const matchCategory = (row: Row) => state.category === 'all' || row.category === state.category;
 	const matchQuery = (row: Row) => state.q === '' || row.search.includes(state.q);
 	const matchRange = (row: Row) => {
 		if (state.range === 'all') return true;
@@ -55,15 +66,26 @@ if (sidebar && searchInput && list) {
 	const matchSources = (row: Row) => state.sources.size === 0 || state.sources.has(row.source);
 
 	function apply() {
+		// Runs first: it can drop selections that the current tab hides.
+		syncCategoryScope();
+
 		let visible = 0;
+		let inCategory = 0;
 
 		for (const row of rows) {
-			const ok = matchQuery(row) && matchRange(row) && matchTags(row) && matchSources(row);
+			if (matchCategory(row)) inCategory++;
+			const ok =
+				matchCategory(row) &&
+				matchQuery(row) &&
+				matchRange(row) &&
+				matchTags(row) &&
+				matchSources(row);
 			row.el.hidden = !ok;
 			if (ok) visible++;
 		}
 
 		if (shown) shown.textContent = String(visible);
+		if (total) total.textContent = String(inCategory);
 		if (empty) empty.hidden = visible !== 0;
 
 		updateFacets();
@@ -80,6 +102,7 @@ if (sidebar && searchInput && list) {
 		const tagHits = new Set<string>();
 
 		for (const row of rows) {
+			if (!matchCategory(row)) continue;
 			if (matchQuery(row) && matchRange(row) && matchTags(row)) {
 				sourceCounts.set(row.source, (sourceCounts.get(row.source) ?? 0) + 1);
 			}
@@ -102,6 +125,40 @@ if (sidebar && searchInput && list) {
 		}
 	}
 
+	const inScope = (el: HTMLElement) => {
+		if (state.category === 'all') return true;
+		// Source buttons carry one category; tag chips can span several.
+		const list = el.dataset.categories ?? el.dataset.category ?? '';
+		return list.split('|').includes(state.category);
+	};
+
+	/**
+	 * Switching tabs hides the sidebar entries that belong to other categories,
+	 * and lets go of any selection that just went out of view — otherwise an
+	 * invisible chip would keep filtering the list with no way to unset it.
+	 */
+	function syncCategoryScope() {
+		for (const button of sourceButtons) {
+			const ok = inScope(button);
+			button.hidden = !ok;
+			if (!ok && state.sources.delete(button.dataset.sourceId!)) {
+				button.setAttribute('aria-pressed', 'false');
+			}
+		}
+
+		for (const chip of tagChips) {
+			const ok = inScope(chip);
+			chip.hidden = !ok;
+			if (!ok && state.tags.delete(chip.dataset.tag!)) {
+				chip.setAttribute('aria-pressed', 'false');
+			}
+		}
+
+		for (const tab of catTabs) {
+			tab.setAttribute('aria-pressed', String(tab.dataset.category === state.category));
+		}
+	}
+
 	function syncGroupState() {
 		sidebar!.querySelector('#group-range')?.setAttribute('data-active', String(state.range !== 'all'));
 		sidebar!.querySelector('#group-tags')?.setAttribute('data-active', String(state.tags.size > 0));
@@ -114,6 +171,7 @@ if (sidebar && searchInput && list) {
 	/** Keep filters in the URL so a reload or a bookmark restores the same view. */
 	function syncUrl() {
 		const params = new URLSearchParams();
+		if (state.category !== 'all') params.set('cat', state.category);
 		if (state.q) params.set('q', state.q);
 		if (state.range !== 'all') params.set('range', state.range);
 		if (state.tags.size) params.set('tags', [...state.tags].join(','));
@@ -124,6 +182,11 @@ if (sidebar && searchInput && list) {
 
 	function restoreFromUrl() {
 		const params = new URLSearchParams(location.search);
+
+		const category = params.get('cat');
+		if (category && catTabs.some((tab) => tab.dataset.category === category)) {
+			state.category = category;
+		}
 
 		const q = params.get('q');
 		if (q) {
@@ -177,6 +240,13 @@ if (sidebar && searchInput && list) {
 		searchInput.focus();
 		apply();
 	});
+
+	for (const tab of catTabs) {
+		tab.addEventListener('click', () => {
+			state.category = tab.dataset.category!;
+			apply();
+		});
+	}
 
 	for (const chip of rangeChips) {
 		chip.addEventListener('click', () => {

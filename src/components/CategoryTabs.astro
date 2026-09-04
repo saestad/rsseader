@@ -1,0 +1,27 @@
+---
+import { categoryIndex } from '../lib/category';
+
+interface Props {
+	/** Article count per category slug, for the number beside each tab. */
+	counts: Record<string, number>;
+	total: number;
+}
+
+const { counts, total } = Astro.props;
+const categories = categoryIndex();
+---
+
+{
+	categories.length > 1 && (
+		<nav class="categories" aria-label="Categories">
+			<button class="cat" type="button" data-category="all" aria-pressed="true">
+				All <span class="cat-count">{total}</span>
+			</button>
+			{categories.map((category) => (
+				<button class="cat" type="button" data-category={category.slug} aria-pressed="false">
+					{category.label} <span class="cat-count">{counts[category.slug] ?? 0}</span>
+				</button>
+			))}
+		</nav>
+	)
+}

@@ -1,5 +1,6 @@
 import { XMLParser } from 'fast-xml-parser';
 import type { FeedSource } from '../config/feeds';
+import { DEFAULT_CATEGORY } from './category';
 
 export interface Article {
 	/** Stable per-article key: feed id + guid/link. */
@@ -19,6 +20,8 @@ export interface Article {
 	image: string | null;
 	sourceId: string;
 	sourceTitle: string;
+	/** The feed's category label, for the top tabs. */
+	sourceCategory: string;
 	tags: string[];
 }
 
@@ -182,6 +185,7 @@ function buildArticle(
 		image: findImage(raw.item, raw.body),
 		sourceId: source.id,
 		sourceTitle: source.title,
+		sourceCategory: source.category || DEFAULT_CATEGORY,
 		// Feed-level tags first (those drive the filters), then per-item categories
 		// so search can match them too.
 		tags: [...new Set([...source.tags, ...categories(raw.item).map((c) => c.toLowerCase())])],

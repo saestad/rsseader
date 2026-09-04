@@ -1,15 +1,22 @@
 /**
  * Your feed list. This is the only file you need to edit to add/remove feeds.
  *
- * - `id`    must be unique and stable (used for filter state)
- * - `title` is what shows on the source badge
- * - `tags`  are free-form; every distinct tag becomes a filter chip
+ * - `id`       must be unique and stable (used for filter state)
+ * - `title`    is what shows on the source badge
+ * - `tags`     are free-form; every distinct tag becomes a filter chip
+ * - `category` becomes a tab at the top; it scopes the whole page
  */
 export interface FeedSource {
 	id: string;
 	title: string;
 	url: string;
 	tags: string[];
+	/**
+	 * Which top tab this feed lives under. Tabs appear in the order they are first
+	 * used below, so reordering feeds reorders the tabs. Feeds that leave it out
+	 * are gathered under "Other".
+	 */
+	category?: string;
 	/** Optional: link to the site itself, shown in the sidebar. Defaults to the feed's own link. */
 	homepage?: string;
 	/**
@@ -25,6 +32,7 @@ export interface FeedSource {
 export const FEEDS: FeedSource[] = [
 	{
 		id: 'tr',
+		category: 'Motorsport',
 		title: 'The Race',
 		url: 'https://www.the-race.com/category/formula-1/rss/',
 		tags: ['formula 1', 'f1'],
@@ -34,6 +42,7 @@ export const FEEDS: FeedSource[] = [
 	},
 	{
 		id: 'retail-wowhead',
+		category: 'World of Warcraft',
 		title: 'Wowhead Retail',
 		url: 'https://www.wowhead.com/news/rss/retail',
 		tags: ['wow', 'world of warcraft', 'gaming', 'news', 'blizzard', 'retail', 'wow news'],
@@ -42,6 +51,7 @@ export const FEEDS: FeedSource[] = [
 	},
 	{
 		id: 'classic-wowhead',
+		category: 'World of Warcraft',
 		title: 'Wowhead Classic',
 		url: 'https://www.wowhead.com/news/rss/classic',
 		tags: ['wow', 'world of warcraft', 'gaming', 'news', 'blizzard', 'classic', 'wow news'],
@@ -50,6 +60,7 @@ export const FEEDS: FeedSource[] = [
 	},
 	{
 		id: 'f1',
+		category: 'Motorsport',
 		title: 'Formula 1',
 		url: 'https://www.formula1.com/en/latest/all.xml',
 		tags: ['formula 1', 'f1'],
@@ -58,6 +69,7 @@ export const FEEDS: FeedSource[] = [
 	},
 	{
 		id: 'f2',
+		category: 'Motorsport',
 		title: 'Formula 2',
 		url: 'https://www.fiaformula2.com/en/latest/all.xml',
 		tags: ['formula 2', 'f2'],
@@ -66,6 +78,7 @@ export const FEEDS: FeedSource[] = [
 	},
 	{
 		id: 'motorsportf1',
+		category: 'Motorsport',
 		title: 'Motorsport.com F1',
 		url: 'https://www.motorsport.com/rss/f1/news/',
 		tags: ['formula 1', 'f1'],
@@ -74,6 +87,7 @@ export const FEEDS: FeedSource[] = [
 	},
 	{
 		id: 'autosportf1',
+		category: 'Motorsport',
 		title: 'Autosport.com F1',
 		url: 'https://www.autosport.com/rss/f1/news/',
 		tags: ['formula 1', 'f1'],
@@ -82,6 +96,7 @@ export const FEEDS: FeedSource[] = [
 	},
 	{
 		id: 'bbci-f1',
+		category: 'Motorsport',
 		title: 'BBC Sport F1',
 		url: 'https://feeds.bbci.co.uk/sport/formula1/rss.xml',
 		tags: ['formula 1', 'f1'],
@@ -90,11 +105,21 @@ export const FEEDS: FeedSource[] = [
 	},
 	{
 		id: 'guardian-f1',
+		category: 'Motorsport',
 		title: 'The Guardian F1',
 		url: 'https://www.theguardian.com/sport/formulaone/rss',
 		tags: ['formula 1', 'f1'],
 		homepage: 'https://www.theguardian.com/sport/formulaone',
 		color: '#00028d',
+	},
+	{
+		id: 'icyveins-wow',
+		category: 'World of Warcraft',
+		title: 'Icy Veins',
+		url: 'https://wp-prod.icy-veins.com/custom-rss/?category=wow',
+		tags: ['wow', 'world of warcraft', 'gaming', 'news', 'blizzard', 'wow news'],
+		homepage: 'https://www.icy-veins.com',
+		color: '#00d9ff',
 	},
 
 ];

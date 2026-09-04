@@ -2,7 +2,9 @@
 import Layout from '../layouts/Layout.astro';
 import ArticleCard from '../components/ArticleCard.astro';
 import FilterSidebar from '../components/FilterSidebar.astro';
+import CategoryTabs from '../components/CategoryTabs.astro';
 import { getFeedBundle, tagIndex } from '../lib/feeds';
+import { categorySlug } from '../lib/category';
 
 export const prerender = false;
 
@@ -17,8 +19,11 @@ Astro.response.headers.set(
 );
 
 const counts: Record<string, number> = {};
+const categoryCounts: Record<string, number> = {};
 for (const article of articles) {
 	counts[article.sourceId] = (counts[article.sourceId] ?? 0) + 1;
+	const slug = categorySlug(article.sourceCategory);
+	categoryCounts[slug] = (categoryCounts[slug] ?? 0) + 1;
 }
 
 const tags = tagIndex();
@@ -37,6 +42,8 @@ const fetchedIso = new Date(fetchedAt).toISOString();
 			<a class="refresh" href="/?refresh" rel="nofollow">Refresh</a>
 		</div>
 	</header>
+
+	<CategoryTabs counts={categoryCounts} total={articles.length} />
 
 	<div class="columns">
 		<FilterSidebar counts={counts} tags={tags} />
@@ -60,7 +67,10 @@ const fetchedIso = new Date(fetchedAt).toISOString();
 			}
 
 			<div class="list-head">
-				<span><strong id="shown-count">{articles.length}</strong> of {articles.length} articles</span>
+				<span>
+					<strong id="shown-count">{articles.length}</strong> of
+					<span id="total-count">{articles.length}</span> articles
+				</span>
 				<span>press <kbd>/</kbd> to search</span>
 			</div>
 

@@ -1,10 +1,11 @@
 ---
 import { FEEDS } from '../config/feeds';
 import { feedColor } from '../lib/color';
+import { categorySlug, DEFAULT_CATEGORY } from '../lib/category';
 
 interface Props {
 	counts: Record<string, number>;
-	tags: { tag: string; count: number }[];
+	tags: { tag: string; count: number; categories: string[] }[];
 }
 
 const { counts, tags } = Astro.props;
@@ -55,8 +56,14 @@ const RANGES = [
 		<h2>Tags <button class="reset" type="button" data-reset="tags">clear</button></h2>
 		<div class="chips" role="group" aria-label="Filter by tag">
 			{
-				tags.map(({ tag }) => (
-					<button class="chip" type="button" data-tag={tag} aria-pressed="false">
+				tags.map(({ tag, categories }) => (
+					<button
+						class="chip"
+						type="button"
+						data-tag={tag}
+						data-categories={categories.join('|')}
+						aria-pressed="false"
+					>
 						{tag}
 					</button>
 				))
@@ -73,6 +80,7 @@ const RANGES = [
 						class="source"
 						type="button"
 						data-source-id={feed.id}
+						data-category={categorySlug(feed.category || DEFAULT_CATEGORY)}
 						aria-pressed="false"
 						style={`--dot: ${feedColor(feed.id)}`}
 						title={feed.tags.join(', ')}

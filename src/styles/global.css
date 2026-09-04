@@ -132,6 +132,70 @@ button {
 	color: var(--accent);
 }
 
+/* ---------- category tabs ---------- */
+
+.categories {
+	display: flex;
+	gap: 2px;
+	/* Pulls the row up under the masthead rule it belongs to. */
+	margin: -14px 0 22px;
+	overflow-x: auto;
+	scrollbar-width: none;
+}
+
+.categories::-webkit-scrollbar {
+	display: none;
+}
+
+.cat {
+	display: inline-flex;
+	align-items: center;
+	gap: 7px;
+	border: 0;
+	background: none;
+	border-radius: 8px 8px 0 0;
+	padding: 7px 12px 8px;
+	font-size: 13.5px;
+	font-weight: 500;
+	letter-spacing: -0.01em;
+	color: var(--text-faint);
+	white-space: nowrap;
+	cursor: pointer;
+}
+
+.cat:hover {
+	color: var(--text);
+	background: var(--surface-2);
+}
+
+/* An accent underline marks the active tab — quieter than a filled pill, and it
+   keeps the tab row distinct from the sidebar's chips. */
+.cat[aria-pressed='true'] {
+	color: var(--text);
+	box-shadow: inset 0 -2px 0 var(--accent);
+}
+
+.cat-count {
+	font-size: 11.5px;
+	font-variant-numeric: tabular-nums;
+	color: var(--text-faint);
+	background: var(--surface-2);
+	border-radius: 999px;
+	padding: 1px 6px;
+}
+
+.cat:hover .cat-count,
+.cat[aria-pressed='true'] .cat-count {
+	background: var(--bg);
+	color: var(--text-dim);
+}
+
+/* Author display rules beat the UA's [hidden], so say it explicitly. */
+.chip[hidden],
+.source[hidden] {
+	display: none;
+}
+
 .columns {
 	display: grid;
 	grid-template-columns: var(--sidebar-w) minmax(0, 1fr);
