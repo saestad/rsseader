@@ -48,11 +48,11 @@ async function fetchOne(source: FeedSource): Promise<Article[]> {
 		throw new Error(`HTTP ${response.status} ${response.statusText}`.trim());
 	}
 
-	const articles = parseFeed(await response.text(), source);
+	// parseFeed derives sort keys for undated items from feed order, so it needs
+	// the articles in the order the feed listed them — sort only afterwards.
+	const articles = parseFeed(await response.text(), source, Date.now());
 
-	return articles
-		.sort((a, b) => (b.publishedAt ?? 0) - (a.publishedAt ?? 0))
-		.slice(0, MAX_ITEMS_PER_FEED);
+	return articles.sort((a, b) => b.sortKey - a.sortKey).slice(0, MAX_ITEMS_PER_FEED);
 }
 
 async function fetchAll(): Promise<FeedBundle> {
@@ -75,8 +75,9 @@ async function fetchAll(): Promise<FeedBundle> {
 		}
 	});
 
-	// Undated items sink to the bottom rather than jumping to 1970.
-	articles.sort((a, b) => (b.publishedAt ?? -Infinity) - (a.publishedAt ?? -Infinity));
+	// sortKey is publishedAt where the feed gave us one, and a position-derived
+	// stand-in where it didn't, so undated feeds interleave instead of sinking.
+	articles.sort((a, b) => b.sortKey - a.sortKey);
 
 	// Cross-posted stories (same URL in two feeds) would otherwise appear twice.
 	const seen = new Set<string>();

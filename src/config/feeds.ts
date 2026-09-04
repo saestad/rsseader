@@ -30,6 +30,13 @@ export const FEEDS: FeedSource[] = [
 		homepage: 'https://www.wowhead.com',
 	},
 	{
+		id: 'classic-wowhead',
+		title: 'Wowhead Classic',
+		url: 'https://www.wowhead.com/news/rss/classic',
+		tags: ['wow', 'world of warcraft', 'gaming', 'news', 'blizzard', 'classic', 'wowhead', 'wow news'],
+		homepage: 'https://www.wowhead.com',
+	},
+	{
 		id: 'f1',
 		title: 'Formula 1',
 		url: 'https://www.formula1.com/en/latest/all.xml',
@@ -51,12 +58,27 @@ export const FEEDS: FeedSource[] = [
 		homepage: 'https://www.motorsport.com',
 	},
 	{
-		id: 'motorsportf2',
-		title: 'Motorsport.com F2',
-		url: 'https://www.motorsport.com/rss/f2/news/',
-		tags: ['formula 2', 'f2', 'motorsport.com'],
-		homepage: 'https://www.motorsport.com',
+		id: 'autosportf1',
+		title: 'Autosport.com F1',
+		url: 'https://www.autosport.com/rss/f1/news/',
+		tags: ['formula 1', 'f1', 'autosport.com'],
+		homepage: 'https://www.autosport.com',
 	},
+	{
+		id: 'bbci-f1',
+		title: 'BBC Sport F1',
+		url: 'https://feeds.bbci.co.uk/sport/formula1/rss.xml',
+		tags: ['formula 1', 'f1', 'bbc', 'bbci'],
+		homepage: 'https://www.bbc.com/sport/formula1',
+	},
+	{
+		id: 'guardian-f1',
+		title: 'The Guardian F1',
+		url: 'https://www.theguardian.com/sport/formulaone/rss',
+		tags: ['formula 1', 'f1', 'the guardian'],
+		homepage: 'https://www.theguardian.com/sport/formulaone',
+	},
+
 ];
 
 /** How long fetched feeds are reused before hitting the network again. */

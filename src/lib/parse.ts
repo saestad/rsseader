@@ -10,6 +10,11 @@ export interface Article {
 	summary: string;
 	/** Epoch ms, or null when the feed gave us nothing parseable. */
 	publishedAt: number | null;
+	/**
+	 * What the timeline sorts on. Equals `publishedAt` whenever the feed dated the
+	 * item; otherwise it is derived from the feed's own order. Never displayed.
+	 */
+	sortKey: number;
 	author: string | null;
 	image: string | null;
 	sourceId: string;
@@ -170,6 +175,9 @@ function buildArticle(
 		link,
 		summary: stripHtml(raw.body),
 		publishedAt: raw.publishedAt,
+		// Placeholder for undated items; applyFallbackOrder fills those in once the
+		// whole feed is parsed and we can see each item's neighbours.
+		sortKey: raw.publishedAt ?? 0,
 		author: decodeEntities(raw.author).trim() || null,
 		image: findImage(raw.item, raw.body),
 		sourceId: source.id,
@@ -180,66 +188,115 @@ function buildArticle(
 	};
 }
 
+/** How far apart undated items are spaced when nothing bounds them from below. */
+const UNDATED_STEP_MS = 60 * 60 * 1000;
+
+/**
+ * Some feeds date nothing at all (formula1.com and fiaformula2.com's all.xml,
+ * for two) but still list newest first, so we lean on that order: every undated
+ * run is spread between the dated items above and below it, and a feed that
+ * dates nothing hangs off the moment we fetched it. This only ever touches
+ * `sortKey` — `publishedAt` stays null so the card still says "undated" rather
+ * than showing a timestamp we made up.
+ *
+ * The bias is deliberate but worth knowing: an all-undated feed's newest item
+ * always sorts near the top, because "newest in the feed" is the only signal it
+ * gave us. Resolving real dates from the article pages is the fix for that.
+ */
+function applyFallbackOrder(articles: Article[], fetchedAt: number): void {
+	for (let i = 0; i < articles.length; i++) {
+		if (articles[i]!.publishedAt !== null) continue;
+
+		// Take the whole undated run at once so it can be fitted between neighbours.
+		let end = i;
+		while (end < articles.length && articles[end]!.publishedAt === null) end++;
+
+		const run = end - i;
+		const above = i > 0 ? articles[i - 1]!.sortKey : fetchedAt;
+		const below = end < articles.length ? articles[end]!.publishedAt : null;
+		// max(0) guards feeds that aren't actually in date order: the run collapses
+		// onto its anchor and the stable sort keeps the feed's own sequence.
+		const gap = below === null ? UNDATED_STEP_MS * (run + 1) : Math.max(0, above - below);
+		const step = Math.min(UNDATED_STEP_MS, gap / (run + 1));
+
+		for (let j = 0; j < run; j++) {
+			articles[i + j]!.sortKey = above - step * (j + 1);
+		}
+
+		i = end - 1;
+	}
+}
+
 /**
  * Parse RSS 2.0, RSS 1.0 (RDF), or Atom into a common Article shape.
+ * Items come back in feed order; `fetchedAt` anchors undated ones.
  * Throws on XML that isn't recognisably a feed.
  */
-export function parseFeed(xml: string, source: FeedSource): Article[] {
+export function parseFeed(xml: string, source: FeedSource, fetchedAt = Date.now()): Article[] {
 	const doc = parser.parse(xml) as Record<string, any>;
+
+	const ordered = (items: Article[]): Article[] => {
+		applyFallbackOrder(items, fetchedAt);
+		return items;
+	};
 
 	const channel = doc?.rss?.channel ?? doc?.channel;
 	const rdf = doc?.['rdf:RDF'] ?? doc?.RDF;
 	const atom = doc?.feed;
 
 	if (channel) {
-		return toArray<Record<string, unknown>>(
-			Array.isArray(channel) ? channel[0]?.item : channel.item
-		)
-			.map((item) => {
-				const body = text(item['content:encoded']) || text(item.description);
-				return buildArticle(source, {
-					title: text(item.title),
-					link: text(item.link) || attr(toArray(item.link)[0], 'href'),
-					body,
-					publishedAt: parseDate(item.pubDate, item['dc:date'], item.published, item.updated),
-					author: text(item['dc:creator']) || text(item.author),
-					guid: text(item.guid),
-					item,
-				});
-			})
-			.filter((a): a is Article => a !== null);
+		return ordered(
+			toArray<Record<string, unknown>>(Array.isArray(channel) ? channel[0]?.item : channel.item)
+				.map((item) => {
+					const body = text(item['content:encoded']) || text(item.description);
+					return buildArticle(source, {
+						title: text(item.title),
+						link: text(item.link) || attr(toArray(item.link)[0], 'href'),
+						body,
+						publishedAt: parseDate(item.pubDate, item['dc:date'], item.published, item.updated),
+						author: text(item['dc:creator']) || text(item.author),
+						guid: text(item.guid),
+						item,
+					});
+				})
+				.filter((a): a is Article => a !== null)
+		);
 	}
 
 	if (rdf) {
-		return toArray<Record<string, unknown>>(rdf.item)
-			.map((item) =>
-				buildArticle(source, {
-					title: text(item.title),
-					link: text(item.link) || attr(item, 'rdf:about'),
-					body: text(item['content:encoded']) || text(item.description),
-					publishedAt: parseDate(item['dc:date'], item.date),
-					author: text(item['dc:creator']),
-					guid: attr(item, 'rdf:about'),
-					item,
-				})
-			)
-			.filter((a): a is Article => a !== null);
+		return ordered(
+			toArray<Record<string, unknown>>(rdf.item)
+				.map((item) =>
+					buildArticle(source, {
+						title: text(item.title),
+						link: text(item.link) || attr(item, 'rdf:about'),
+						body: text(item['content:encoded']) || text(item.description),
+						publishedAt: parseDate(item['dc:date'], item.date),
+						author: text(item['dc:creator']),
+						guid: attr(item, 'rdf:about'),
+						item,
+					})
+				)
+				.filter((a): a is Article => a !== null)
+		);
 	}
 
 	if (atom) {
-		return toArray<Record<string, unknown>>(atom.entry)
-			.map((entry) =>
-				buildArticle(source, {
-					title: text(entry.title),
-					link: atomLink(entry),
-					body: text(entry.content) || text(entry.summary),
-					publishedAt: parseDate(entry.published, entry.updated),
-					author: text((entry.author as Record<string, unknown>)?.name) || text(entry.author),
-					guid: text(entry.id),
-					item: entry,
-				})
-			)
-			.filter((a): a is Article => a !== null);
+		return ordered(
+			toArray<Record<string, unknown>>(atom.entry)
+				.map((entry) =>
+					buildArticle(source, {
+						title: text(entry.title),
+						link: atomLink(entry),
+						body: text(entry.content) || text(entry.summary),
+						publishedAt: parseDate(entry.published, entry.updated),
+						author: text((entry.author as Record<string, unknown>)?.name) || text(entry.author),
+						guid: text(entry.id),
+						item: entry,
+					})
+				)
+				.filter((a): a is Article => a !== null)
+		);
 	}
 
 	throw new Error('Not a recognisable RSS, RDF or Atom document');
