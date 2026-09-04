@@ -81,12 +81,31 @@ button {
 
 .masthead h1 {
 	margin: 0;
-	font-size: 21px;
-	letter-spacing: -0.01em;
+	font-size: 23px;
+	font-weight: 600;
+	/* Wordmarks want tighter tracking than body copy. */
+	letter-spacing: -0.035em;
+	line-height: 1.1;
 }
 
+/* Same dot vocabulary as the sidebar's per-source markers, so the masthead
+   reads as part of the same system instead of decoration. */
+.masthead h1::before {
+	content: '';
+	display: inline-block;
+	width: 7px;
+	height: 7px;
+	margin-right: 10px;
+	border-radius: 50%;
+	background: var(--accent);
+	/* Sits on the x-height so it reads as part of the word, not a bullet. */
+	vertical-align: 0.24em;
+}
+
+/* Weight contrast instead of colour: quieter, and it still lands the RSS pun. */
 .masthead h1 span {
-	color: var(--accent);
+	font-weight: 300;
+	color: var(--text-dim);
 }
 
 .masthead-meta {
