@@ -1,0 +1,78 @@
+---
+import Layout from '../layouts/Layout.astro';
+import ArticleCard from '../components/ArticleCard.astro';
+import FilterSidebar from '../components/FilterSidebar.astro';
+import { getFeedBundle, tagIndex } from '../lib/feeds';
+
+export const prerender = false;
+
+// `?refresh` bypasses the in-memory cache for a manual pull.
+const force = Astro.url.searchParams.has('refresh');
+const { articles, errors, fetchedAt } = await getFeedBundle(force);
+
+// Let Cloudflare's edge cache hold the rendered page for a few minutes too.
+Astro.response.headers.set(
+	'cache-control',
+	force ? 'no-store' : 'public, max-age=0, s-maxage=300, stale-while-revalidate=900'
+);
+
+const counts: Record<string, number> = {};
+for (const article of articles) {
+	counts[article.sourceId] = (counts[article.sourceId] ?? 0) + 1;
+}
+
+const tags = tagIndex();
+const fetchedIso = new Date(fetchedAt).toISOString();
+---
+
+<Layout title="RSSeader">
+	<header class="masthead">
+		<h1>RSS<span>eader</span></h1>
+		<div class="masthead-meta">
+			<span>
+				updated <time datetime={fetchedIso} data-ts={fetchedAt}>
+					{new Date(fetchedAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+				</time>
+			</span>
+			<a class="refresh" href="/?refresh" rel="nofollow">Refresh</a>
+		</div>
+	</header>
+
+	<div class="columns">
+		<FilterSidebar counts={counts} tags={tags} />
+
+		<main>
+			{
+				errors.length > 0 && (
+					<details class="errors">
+						<summary>
+							{errors.length} {errors.length === 1 ? 'feed' : 'feeds'} failed to load
+						</summary>
+						<ul>
+							{errors.map((error) => (
+								<li>
+									<strong>{error.sourceTitle}</strong> — {error.message}
+								</li>
+							))}
+						</ul>
+					</details>
+				)
+			}
+
+			<div class="list-head">
+				<span><strong id="shown-count">{articles.length}</strong> of {articles.length} articles</span>
+				<span>press <kbd>/</kbd> to search</span>
+			</div>
+
+			<ul class="feed" id="feed">
+				{articles.map((article) => <ArticleCard article={article} />)}
+			</ul>
+
+			<p class="empty" id="empty" hidden>No articles match these filters.</p>
+		</main>
+	</div>
+</Layout>
+
+<script>
+	import '../scripts/filters';
+</script>

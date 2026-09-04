@@ -1,0 +1,88 @@
+---
+import { FEEDS } from '../config/feeds';
+import { feedColor } from '../lib/color';
+
+interface Props {
+	counts: Record<string, number>;
+	tags: { tag: string; count: number }[];
+}
+
+const { counts, tags } = Astro.props;
+
+const RANGES = [
+	{ value: '1', label: '24h' },
+	{ value: '7', label: 'Week' },
+	{ value: '30', label: 'Month' },
+	{ value: 'all', label: 'All' },
+];
+---
+
+<aside class="sidebar" id="filters" data-collapsed="true">
+	<button class="filters-toggle" type="button" aria-expanded="false" aria-controls="filters">
+		Filters
+	</button>
+
+	<div class="search" data-filled="false">
+		<input
+			type="search"
+			id="q"
+			placeholder="Search articles…"
+			autocomplete="off"
+			aria-label="Search articles"
+		/>
+		<button class="search-clear" type="button" aria-label="Clear search">×</button>
+	</div>
+
+	<section class="filter-group" id="group-range" data-active="false">
+		<h2>When <button class="reset" type="button" data-reset="range">reset</button></h2>
+		<div class="chips" role="group" aria-label="Time range">
+			{
+				RANGES.map((range) => (
+					<button
+						class="chip"
+						type="button"
+						data-range={range.value}
+						aria-pressed={range.value === 'all' ? 'true' : 'false'}
+					>
+						{range.label}
+					</button>
+				))
+			}
+		</div>
+	</section>
+
+	<section class="filter-group" id="group-tags" data-active="false">
+		<h2>Tags <button class="reset" type="button" data-reset="tags">clear</button></h2>
+		<div class="chips" role="group" aria-label="Filter by tag">
+			{
+				tags.map(({ tag }) => (
+					<button class="chip" type="button" data-tag={tag} aria-pressed="false">
+						{tag}
+					</button>
+				))
+			}
+		</div>
+	</section>
+
+	<section class="filter-group" id="group-sources" data-active="false">
+		<h2>Sources <button class="reset" type="button" data-reset="sources">clear</button></h2>
+		<div class="sources" role="group" aria-label="Filter by source">
+			{
+				FEEDS.map((feed) => (
+					<button
+						class="source"
+						type="button"
+						data-source-id={feed.id}
+						aria-pressed="false"
+						style={`--dot: ${feedColor(feed.id)}`}
+						title={feed.tags.join(', ')}
+					>
+						<span class="dot" />
+						<span class="label">{feed.title}</span>
+						<span class="count">{counts[feed.id] ?? 0}</span>
+					</button>
+				))
+			}
+		</div>
+	</section>
+</aside>

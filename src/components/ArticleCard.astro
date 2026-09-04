@@ -1,0 +1,51 @@
+---
+import type { Article } from '../lib/feeds';
+import { feedColor } from '../lib/color';
+
+interface Props {
+	article: Article;
+}
+
+const { article } = Astro.props;
+
+// Everything the search box looks at, flattened once at render time.
+const haystack = [article.title, article.summary, article.sourceTitle, article.author, ...article.tags]
+	.filter(Boolean)
+	.join(' ')
+	.toLowerCase();
+
+const isoDate = article.publishedAt ? new Date(article.publishedAt).toISOString() : '';
+const fallbackDate = article.publishedAt
+	? new Date(article.publishedAt).toLocaleDateString('en-GB', {
+			day: 'numeric',
+			month: 'short',
+		})
+	: 'undated';
+---
+
+<li
+	class="card"
+	data-source={article.sourceId}
+	data-tags={article.tags.join('|')}
+	data-ts={article.publishedAt ?? 0}
+	data-search={haystack}
+	style={`--dot: ${feedColor(article.sourceId)}`}
+>
+	<div>
+		<div class="card-meta">
+			<span class="card-source">{article.sourceTitle}</span>
+			<span class="sep"></span>
+			<time datetime={isoDate} data-ts={article.publishedAt ?? ''}>{fallbackDate}</time>
+			{article.author && <><span class="sep"></span><span>{article.author}</span></>}
+		</div>
+		<h3>
+			<a href={article.link} target="_blank" rel="noopener noreferrer">{article.title}</a>
+		</h3>
+		{article.summary && <p>{article.summary}</p>}
+	</div>
+	{
+		article.image && (
+			<img class="card-thumb" src={article.image} alt="" loading="lazy" decoding="async" />
+		)
+	}
+</li>
